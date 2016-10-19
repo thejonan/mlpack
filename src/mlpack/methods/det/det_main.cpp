@@ -148,7 +148,7 @@ int main(int argc, char *argv[])
       arma::rowvec trainingDensities(trainingData.n_cols);
       Timer::Start("det_estimation_time");
       for (size_t i = 0; i < trainingData.n_cols; i++)
-        trainingDensities[i] = tree->ComputeValue(ReferColumn(trainingData, i));
+        trainingDensities[i] = tree->ComputeValue(trainingData.col(i));
       Timer::Stop("det_estimation_time");
 
       data::Save(CLI::GetParam<string>("training_set_estimates_file"), trainingDensities);
@@ -171,7 +171,7 @@ int main(int argc, char *argv[])
     Timer::Start("det_test_set_estimation");
     arma::rowvec testDensities(testData.n_cols);
     for (size_t i = 0; i < testData.n_cols; i++)
-      testDensities[i] = tree->ComputeValue(ReferColumn(testData, i));
+      testDensities[i] = tree->ComputeValue(testData.col(i));
     Timer::Stop("det_test_set_estimation");
 
     if (CLI::GetParam<string>("test_set_estimates_file") != "")

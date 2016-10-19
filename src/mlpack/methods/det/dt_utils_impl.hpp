@@ -133,7 +133,8 @@ DTree<MatType, TagType>* mlpack::det::Trainer(MatType& dataset,
     {
       for (size_t i = 0; i < dataset.n_cols; ++i)
       {
-        arma::vec testPoint = dataset.unsafe_col(i);
+        // TODO: Change this to unsage_col() for arma::mat, if everything works.
+        typename MatType::vec_type testPoint = dataset.col(i);
         outfile << dtree.ComputeValue(testPoint) << std::endl;
       }
     }
@@ -236,7 +237,7 @@ DTree<MatType, TagType>* mlpack::det::Trainer(MatType& dataset,
       double cvVal = 0.0;
       for (size_t j = 0; j < test.n_cols; j++)
       {
-        arma::vec testPoint = test.unsafe_col(j);
+        typename MatType::vec_type testPoint = test.col(j);
         cvVal += cvDTree.ComputeValue(testPoint);
       }
 
@@ -253,7 +254,7 @@ DTree<MatType, TagType>* mlpack::det::Trainer(MatType& dataset,
     double cvVal = 0.0;
     for (size_t i = 0; i < test.n_cols; ++i)
     {
-      typename MatType::vec_type testPoint = test.unsafe_col(i);
+      typename MatType::vec_type testPoint = test.col(i);
       cvVal += cvDTree.ComputeValue(testPoint);
     }
 
