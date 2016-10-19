@@ -67,6 +67,10 @@ PARAM_FLAG("volume_regularization", "This flag gives the used the option to use"
     "penalize low volume leaves.", "R");
 */
 
+
+typedef arma::sp_mat   MAT;
+#define SPARSE  1
+
 int main(int argc, char *argv[])
 {
   CLI::ParseCommandLine(argc, argv);
@@ -101,13 +105,20 @@ int main(int argc, char *argv[])
         << "(-T) is not specified." << endl;
 
   // Are we training a DET or loading from file?
-  DTree<arma::mat, int>* tree;
+  DTree<MAT, int>* tree;
   if (CLI::HasParam("training_file"))
   {
     const string trainSetFile = CLI::GetParam<string>("training_file");
+#if SPARSE
+    arma::mat trainingFile;
+    data::Load(trainSetFile, trainingFile, true);
+
+    MAT trainingData(trainingFile);
+#else
     arma::mat trainingData;
     data::Load(trainSetFile, trainingData, true);
-
+#endif
+    
     // Cross-validation here.
     size_t folds = CLI::GetParam<int>("folds");
     if (folds == 0)
@@ -127,7 +138,7 @@ int main(int argc, char *argv[])
 
     // Obtain the optimal tree.
     Timer::Start("det_training");
-    tree = Trainer<arma::mat, int>(trainingData, folds, regularization, maxLeafSize, minLeafSize, "");
+    tree = Trainer<MAT, int>(trainingData, folds, regularization, maxLeafSize, minLeafSize, "");
     Timer::Stop("det_training");
 
     // Compute training set estimates, if desired.
@@ -137,17 +148,15 @@ int main(int argc, char *argv[])
       arma::rowvec trainingDensities(trainingData.n_cols);
       Timer::Start("det_estimation_time");
       for (size_t i = 0; i < trainingData.n_cols; i++)
-        trainingDensities[i] = tree->ComputeValue(trainingData.unsafe_col(i));
+        trainingDensities[i] = tree->ComputeValue(ReferColumn(trainingData, i));
       Timer::Stop("det_estimation_time");
 
-      data::Save(CLI::GetParam<string>("training_set_estimates_file"),
-          trainingDensities);
+      data::Save(CLI::GetParam<string>("training_set_estimates_file"), trainingDensities);
     }
   }
   else
   {
-    data::Load(CLI::GetParam<string>("input_model_file"), "det_model", tree,
-        true);
+    data::Load(CLI::GetParam<string>("input_model_file"), "det_model", tree, true);
   }
 
   // Compute the density at the provided test points and output the density in
@@ -162,12 +171,11 @@ int main(int argc, char *argv[])
     Timer::Start("det_test_set_estimation");
     arma::rowvec testDensities(testData.n_cols);
     for (size_t i = 0; i < testData.n_cols; i++)
-      testDensities[i] = tree->ComputeValue(testData.unsafe_col(i));
+      testDensities[i] = tree->ComputeValue(ReferColumn(testData, i));
     Timer::Stop("det_test_set_estimation");
 
     if (CLI::GetParam<string>("test_set_estimates_file") != "")
-      data::Save(CLI::GetParam<string>("test_set_estimates_file"),
-          testDensities);
+      data::Save(CLI::GetParam<string>("test_set_estimates_file"), testDensities);
   }
 
   // Print variable importance.
@@ -176,8 +184,7 @@ int main(int argc, char *argv[])
 
   // Save the model, if desired.
   if (CLI::HasParam("output_model_file"))
-    data::Save(CLI::GetParam<string>("output_model_file"), "det_model", tree,
-        false);
+    data::Save(CLI::GetParam<string>("output_model_file"), "det_model", tree, false);
 
   delete tree;
 }
