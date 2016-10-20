@@ -67,9 +67,7 @@ PARAM_FLAG("volume_regularization", "This flag gives the used the option to use"
     "penalize low volume leaves.", "R");
 */
 
-
-typedef arma::sp_mat   MAT;
-#define SPARSE  1
+typedef arma::mat   MAT;
 
 int main(int argc, char *argv[])
 {
@@ -109,15 +107,8 @@ int main(int argc, char *argv[])
   if (CLI::HasParam("training_file"))
   {
     const string trainSetFile = CLI::GetParam<string>("training_file");
-#if SPARSE
-    arma::mat trainingFile;
-    data::Load(trainSetFile, trainingFile, true);
-
-    MAT trainingData(trainingFile);
-#else
-    arma::mat trainingData;
+    MAT trainingData;
     data::Load(trainSetFile, trainingData, true);
-#endif
     
     // Cross-validation here.
     size_t folds = CLI::GetParam<int>("folds");

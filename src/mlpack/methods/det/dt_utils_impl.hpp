@@ -25,7 +25,7 @@ void mlpack::det::PrintLeafMembership(DTree<MatType, TagType>* dtree,
 
   for (size_t i = 0; i < data.n_cols; i++)
   {
-    const typename MatType::vec_type testPoint = data.unsafe_col(i);
+    const typename MatType::vec_type testPoint = data.col(i);
     const TagType leafTag = dtree->FindBucket(testPoint);
     const size_t label = labels[i];
     table(leafTag, label) += 1;

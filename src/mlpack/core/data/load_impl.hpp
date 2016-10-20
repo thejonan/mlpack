@@ -264,6 +264,35 @@ bool Load(const std::string& filename,
     return false;
 #endif
   }
+  else if (extension == "coord") // sparse matrix extension
+  {
+    arma::sp_mat sparseMat;
+    bool success = sparseMat.load(filename, arma::coord_ascii);
+
+    Timer::Stop("loading_data");
+    if (success)
+    {
+      if (transpose)
+        sparseMat = sparseMat.t();
+      
+      matrix.zeros();
+      for (arma::sp_mat::row_col_iterator it = sparseMat.begin();
+           it != sparseMat.end();
+           ++it)
+      {
+        matrix(it.row(), it.col()) = *it;
+      }
+    }
+    else if (fatal)
+      Log::Fatal << "Failed to load '" << filename << "' as sparse coord data." << std::endl;
+    else
+      Log::Warn << "Failed to load '" << filename << "' as sparse coord data." << std::endl;
+    
+    Log::Info << "Size is " << (transpose ? matrix.n_cols : matrix.n_rows)
+                   << " x " << (transpose ? matrix.n_rows : matrix.n_cols) << ".\n";
+    
+    return success;
+  }
   else // Unknown extension...
   {
     unknownType = true;
