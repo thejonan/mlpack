@@ -264,18 +264,42 @@ bool Load(const std::string& filename,
     return false;
 #endif
   }
-  else if (extension == "coord") // sparse matrix extension
+  else if (extension == "coord" ||
+           extension == "mtx" ||
+           extension == "matrix" ) // sparse matrix extensions
   {
-    arma::sp_mat sparseMat;
-    bool success = sparseMat.load(filename, arma::coord_ascii);
+    Log::Info << "Loading '" << filename << "' as sparse matrix.  " << std::flush;
 
-    Timer::Stop("loading_data");
+    // check for the MarketMatrix header first.
+    const std::string MM_HDR = "%%MatrixMarket matrix coordinate real general";
+    std::streampos pos = stream.tellg();
+
+    std::string buffer;
+    std::getline(stream, buffer, '\n');
+    
+    if (buffer == MM_HDR)
+    {
+      for (;buffer[0] == '%';)
+        std::getline(stream, buffer, '\n');
+      // This will read the matrix size line, but it will foul the
+      // Armadillo's reading procedure anyways.
+    }
+    else
+    {
+      stream.clear();
+      stream.seekg(pos); // Reset stream position after peeking.
+    }
+    
+    
+    arma::sp_mat sparseMat;
+    bool success = sparseMat.load(stream, arma::coord_ascii);
+
     if (success)
     {
       if (transpose)
         sparseMat = sparseMat.t();
       
-      matrix.zeros();
+      matrix.zeros(sparseMat.n_rows, sparseMat.n_cols);
       for (arma::sp_mat::row_col_iterator it = sparseMat.begin();
            it != sparseMat.end();
            ++it)
@@ -288,9 +312,9 @@ bool Load(const std::string& filename,
     else
       Log::Warn << "Failed to load '" << filename << "' as sparse coord data." << std::endl;
     
-    Log::Info << "Size is " << (transpose ? matrix.n_cols : matrix.n_rows)
-                   << " x " << (transpose ? matrix.n_rows : matrix.n_cols) << ".\n";
-    
+    Log::Info << "Size is " << matrix.n_rows << " x " << matrix.n_cols << ".\n";
+
+    Timer::Stop("loading_data");
     return success;
   }
   else // Unknown extension...
