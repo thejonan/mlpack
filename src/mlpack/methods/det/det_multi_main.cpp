@@ -68,12 +68,12 @@ int main(int argc, char *argv[])
   Timer::Start("models_loading");
   for (size_t i = 0;i < modelFiles.size(); ++i)
   {
-    Log::Info << "Model " << modelFiles[i] << "... ";
+    Log::Info << "Model '" << modelFiles[i] << "' ... ";
 
     DET* tree;
     data::Load(modelFiles[i], "det_model", tree, true);
     if (!tree)
-      Log::Warn << "Failed loading " << modelFiles[i] << endl;
+      Log::Warn << "Failed loading '" << modelFiles[i] << "' !" << endl;
     else
     {
       Log::Info << "Loaded: " << endl
@@ -99,7 +99,7 @@ int main(int argc, char *argv[])
   else
   {
     string fName = CLI::GetParam<string>("test_file");
-    Log::Info << "Loading " << fName << " ... ";
+    Log::Info << "Loading '" << fName << "' ... ";
     input.reset(new ifstream(fName, std::ifstream::in));
     if (!input->good())
       Log::Fatal << "Failed!" << endl;
@@ -117,7 +117,7 @@ int main(int argc, char *argv[])
     string fName = CLI::GetParam<string>("estimates_file");
     output.reset(new ofstream(fName, std::ofstream::out));
     if (!output->good())
-      Log::Fatal << "Failed to open " << fName << " for writing!" << endl;
+      Log::Fatal << "Failed to open '" << fName << "' for writing!" << endl;
   }
 
   Log::Info << "Processing... " << flush;
