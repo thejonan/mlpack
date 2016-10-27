@@ -68,15 +68,18 @@ int main(int argc, char *argv[])
   Timer::Start("models_loading");
   for (size_t i = 0;i < modelFiles.size(); ++i)
   {
-    Log::Info << "Model loading " << modelFiles[i] << "...";
+    Log::Info << "Model " << modelFiles[i] << "... ";
 
     DET* tree;
     data::Load(modelFiles[i], "det_model", tree, true);
     if (!tree)
-      Log::Warn << " failed loading " << modelFiles[i] << endl;
+      Log::Warn << "Failed loading " << modelFiles[i] << endl;
     else
     {
-      Log::Info << " done." << endl;
+      Log::Info << "Loaded: " << endl
+                << "  Leaves:    " << tree->SubtreeLeaves() << endl
+                << "  Samples:   " << (tree->End() - tree->Start()) << endl
+                << "  LogVolume: " << tree->LogVolume() << endl;
       models.push_back(tree);
       dataSize = std::max<size_t>(dataSize, tree->MaxVals().n_elem);
     }
@@ -96,12 +99,12 @@ int main(int argc, char *argv[])
   else
   {
     string fName = CLI::GetParam<string>("test_file");
-    Log::Info << "Processing " << fName << "...";
+    Log::Info << "Loading " << fName << " ... ";
     input.reset(new ifstream(fName, std::ifstream::in));
     if (!input->good())
-      Log::Fatal << " failed!" << endl;
+      Log::Fatal << "Failed!" << endl;
     else
-      Log::Info << " done." << endl;
+      Log::Info << "Done." << endl;
   }
 
   if (!CLI::HasParam("estimates_file"))
@@ -117,13 +120,19 @@ int main(int argc, char *argv[])
       Log::Fatal << "Failed to open " << fName << " for writing!" << endl;
   }
 
+  Log::Info << "Processing... " << flush;
   Timer::Start("processing");
   // Compute the density at the provided test points and output the density.
 
   std::string line_string;
   std::string token;
   
-  while(input->good())
+  output->setf(ios::scientific);
+  output->precision(14);
+  const size_t cell_width = 22;
+  size_t samplesCnt;
+  
+  for(samplesCnt = 0;input->good();++samplesCnt)
   {
     std::getline(*input, line_string);
     if(line_string.size() == 0)
@@ -151,15 +160,26 @@ int main(int argc, char *argv[])
       DET* model = models[m];
       const double val = model->ComputeValue(data);
       const size_t cnt = model->End() - model->Start();
-      density += (long double)val * cnt;
-      count += cnt;
+#pragma omp critical (DensityUpdate)
+      {
+        density += (long double)val * cnt;
+        count += cnt;
+      }
     }
     
     density /= count;
     
-    *output << (double)density << endl;
+    Log::Assert(!isnan(density));
+    
+    // now print it the very same way Arma is doing
+    output->put(' ');
+    output->width(std::streamsize(cell_width));
+    arma::arma_ostream::print_elem(*output, density, false);
+    output->put('\n');
   }
   
   Timer::Stop("processing");
+  Log::Info << "Done (" << samplesCnt << " samples)." << endl;
+  
   for_each(models.begin(), models.end(), Dealloc);
 }
