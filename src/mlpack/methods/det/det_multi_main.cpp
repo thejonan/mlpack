@@ -37,18 +37,16 @@ PARAM_STRING_IN("test_file", "A set of test points to estimate the density of.",
                 "t", "");
 
 // Input or output model.
-PARAM_VECTOR_IN_REQ(string, "model_file", "File(s) containing already trained"
-                "density estimation tree(s).", "m");
+PARAM_VECTOR_IN_REQ(string, "model_file", "File(s) containing already trained "
+                    "density estimation tree(s).", "m");
 
 // Output data files.
-PARAM_STRING_OUT("estimates_file", "The file in which to output the density"
+PARAM_STRING_OUT("estimates_file", "The file in which to output the density "
     "estimates on the test set.", "e");
 
 typedef DTree<arma::mat, int> DET;
 
 struct noop { void operator()(...) const {} };
-
-void Dealloc(const DET* tree) { delete tree; }
 
 int main(int argc, char *argv[])
 {
@@ -60,28 +58,27 @@ int main(int argc, char *argv[])
                << "run the estimation!" << endl;
   
   vector<string> modelFiles = CLI::GetParam<vector<string>>("model_file");
-  vector<DET*> models;
-  
   Log::Info << modelFiles.size() << " models provided." << endl;
-
+    
+  vector<DET> models(modelFiles.size());
+    
   size_t dataSize = 0;
   Timer::Start("models_loading");
   for (size_t i = 0;i < modelFiles.size(); ++i)
   {
     Log::Info << "Model '" << modelFiles[i] << "' ... ";
-
-    DET* tree;
-    data::Load(modelFiles[i], "det_model", tree, true);
-    if (!tree)
+      
+    DET& tree = models[i];
+    const bool loaded = data::Load(modelFiles[i], "model", tree, true);
+    if (!loaded)
       Log::Warn << "Failed loading '" << modelFiles[i] << "' !" << endl;
     else
     {
       Log::Info << "Loaded: " << endl
-                << "  Leaves:    " << tree->SubtreeLeaves() << endl
-                << "  Samples:   " << (tree->End() - tree->Start()) << endl
-                << "  LogVolume: " << tree->LogVolume() << endl;
-      models.push_back(tree);
-      dataSize = std::max<size_t>(dataSize, tree->MaxVals().n_elem);
+                << "  Leaves:    " << tree.SubtreeLeaves() << endl
+                << "  Samples:   " << (tree.End() - tree.Start()) << endl
+                << "  LogVolume: " << tree.LogVolume() << endl;
+      dataSize = std::max<size_t>(dataSize, tree.MaxVals().n_elem);
     }
   }
   Timer::Stop("models_loading");
@@ -157,9 +154,9 @@ int main(int argc, char *argv[])
   for (size_t m = 0; m < models.size(); ++m)
 #endif
     {
-      DET* model = models[m];
-      const double val = model->ComputeValue(data);
-      const size_t cnt = model->End() - model->Start();
+      DET& model = models[m];
+      const double val = model.ComputeValue(data);
+      const size_t cnt = model.End() - model.Start();
 #pragma omp critical (DensityUpdate)
       {
         density += (long double)val * cnt;
@@ -180,6 +177,4 @@ int main(int argc, char *argv[])
   
   Timer::Stop("processing");
   Log::Info << "Done (" << samplesCnt << " samples)." << endl;
-  
-  for_each(models.begin(), models.end(), Dealloc);
 }
