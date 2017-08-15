@@ -5,6 +5,8 @@
  * A tool for running multi DETs on a set
  */
 #include <mlpack/core.hpp>
+#include <mlpack/core/util/cli.hpp>
+#include <mlpack/core/util/mlpack_main.hpp>
 #include <vector>
 #include "dtree.hpp"
 
@@ -48,10 +50,8 @@ typedef DTree<arma::mat, int> DET;
 
 struct noop { void operator()(...) const {} };
 
-int main(int argc, char *argv[])
+void mlpackMain()
 {
-  CLI::ParseCommandLine(argc, argv);
-
   // Validate input parameters.
   if (!CLI::HasParam("model_file"))
     Log::Fatal << "You need an already built model(s), in order to "
